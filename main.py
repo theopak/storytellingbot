@@ -90,5 +90,5 @@ def commentObserver(username, password, content_file, subreddit='all', t=1800):
 if __name__ == '__main__':
     commentObserver(content_file='alice-in-wonderland.txt',
         username='storytellingbot',
-        password='nMF-tf8-Ykm-JxD',
+        password='password_changed_since_last_commit',
         subreddit='storytellingbottests')
