@@ -11,6 +11,7 @@ Updated 2015-04-16
 
 
 from __future__ import print_function
+from storytellingbot.localsettings import USERNAME, PASSWORD
 from pprint import pprint
 from nltk.tbl.demo import postag
 import time, random
@@ -92,3 +93,5 @@ if __name__ == '__main__':
         username='storytellingbot',
         password='password_changed_since_last_commit',
         subreddit='storytellingbottests')
+                    username=USERNAME,
+                    password=PASSWORD,

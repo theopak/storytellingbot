@@ -55,3 +55,6 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# Passwords, keys, and other sensitive settings
+localsettings.py
