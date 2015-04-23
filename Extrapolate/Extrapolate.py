@@ -1,17 +1,17 @@
 #!/usr/bin/python2.7
 
 
-#import nltk
+# import nltk
 from nltk import word_tokenize
 from nltk import pos_tag
 from nltk.corpus import wordnet
 from nltk.stem.wordnet import WordNetLemmatizer as wnl
 import string
 import random
-#nltk.download()
-#nltk downloads: maxent_ne_chunker, maxent_treebank_pos_tagger, punkt, wordnet
-#install numpy
-#WordNetLemmatizer().lemmatize(word,'v')
+# nltk.download()
+# nltk downloads: maxent_ne_chunker, maxent_treebank_pos_tagger, punkt, wordnet
+# install numpy
+# WordNetLemmatizer().lemmatize(word,'v')
 
 
 class Extrapolate:

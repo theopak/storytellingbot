@@ -5,18 +5,18 @@
 """
 storytellingbot
 COGS-4640/CSCI-4977 Intelligent Virtual Agent
-Theo Pak <theopak@gmail.com>
-Updated 2015-04-16
+https://github.com/theopak/storytellingbot
 """
 
 
 from __future__ import print_function
 from storytellingbot.localsettings import USERNAME, PASSWORD
+import time
+import random
 from pprint import pprint
-from nltk.tbl.demo import postag
-import time, random
 import praw
 from Extrapolate import Extrapolate
+from nltk.tbl.demo import postag
 
 
 def nltk_helloworld():
@@ -25,14 +25,15 @@ def nltk_helloworld():
     """
     print("Running demo from nltk.tbl.demo.postag")
     postag(incremental_stats=True,
-        separate_baseline_data=True,
-        learning_curve_output="learningcurve.png")
+           separate_baseline_data=True,
+           learning_curve_output="learningcurve.png")
     print("done")
 
 
 def bodyContainsKeyword(body, keywords):
     """
-    Returns a keyword if any word in the body matches a word from the keywrods set.
+    Returns a keyword if any word in the body matches a word from the
+    keywrods set.
     """
     body_words = body.split()
     for word in body_words:
@@ -71,7 +72,7 @@ def commentObserver(username, password, content_file, subreddit='all', t=1800):
         for comment in comments:
             match = bodyContainsKeyword(comment.body, keywords)
             if (match != '') and (comment.id not in outbox):
-                print('[INFO] -- comment id', comment.id, 'matched on keyword', match)
+                print('[INFO] -- comment id', comment.id, 'matched', match)
                 try:
                     # response = random.choice(content)
                     response = e.extrapolate(comment.body)
@@ -83,15 +84,13 @@ def commentObserver(username, password, content_file, subreddit='all', t=1800):
                 comment.reply("response")
                 outbox.add(comment.id)
 
-        # Redit enforces rate limits. It's better if your account has more karma.
+        # Redit enforces rate limits. It's better if your account has karma.
         print('[INFO] Sleeping for 30 minutes to avoid rate limit...')
         time.sleep(t)
 
 
 if __name__ == '__main__':
     commentObserver(content_file='alice-in-wonderland.txt',
-        username='storytellingbot',
-        password='password_changed_since_last_commit',
-        subreddit='storytellingbottests')
                     username=USERNAME,
                     password=PASSWORD,
+                    subreddit='storytellingbottests')
