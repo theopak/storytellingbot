@@ -67,7 +67,7 @@ class Storytellingbot(object):
         self.cur.execute(query)
         query = '''
             CREATE TABLE IF NOT EXISTS keywords(
-                word        text UNIQUE         -- one word or phrase to seach for
+                word        text UNIQUE         -- one word or phrase to search for
             );'''
         self.cur.execute(query)
         query = '''
