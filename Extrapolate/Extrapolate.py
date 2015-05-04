@@ -11,6 +11,7 @@ from nltk.stem.wordnet import WordNetLemmatizer as wnl
 from re import sub
 import string
 import random
+#from genderPredictor import genderPredictor
 #nltk.download()
 # nltk downloads: maxent_ne_chunker, maxent_treebank_pos_tagger, punkt, wordnet
 # install numpy
@@ -21,9 +22,24 @@ class Extrapolate:
     
     def __init__(self):
         self.gender_prediction_init()
+        
+    def change_gender(self, pnoun, gender):
+        pnlist = [(("her", "female"),("him", "male")), (("she","female"),("he","male")), (("hers","female"),("his","male")), (("herself","female")("himself","male"))]
+        for pair in pnlist:
+            for i in range(len(pair)):
+                if pair[i][0] == pnoun:
+                    if pair[i][1] == gender:
+                        return pnoun
+                    else:
+                        if i == 0:
+                            return pair[1][0]
+                        else:
+                            return pair[0][0]
+        else:
+            return pnoun
 
     def gender_features(self, word):
-        return {'last_letter': word[-1]}
+        return {'last_letter': word[-1], 'last_two': word[-2:], 'last_voewl': word[-1] in 'AEIOUY'}
         
     def gender_prediction_init(self):
         labeled_names = ([(name, 'male') for name in names.words('male.txt')] + [(name, 'female') for name in names.words('female.txt')])
@@ -40,6 +56,8 @@ class Extrapolate:
         tadjs = []
 
         tagged = pos_tag(word_tokenize(sent))
+
+        print(tagged)
 
         for item in tagged:
                 if item[1][0] == 'V':
@@ -68,8 +86,8 @@ class Extrapolate:
         o_tagged = pos_tag(word_tokenize(o_sent))
         n_tagged = pos_tag(word_tokenize(n_sent))
 
-        name = "Jane"
-        print(name, self.classifier.classify(self.gender_features(name)))
+        #name = "Jane"
+        #print(name, self.classifier.classify(self.gender_features(name)))
 
         for o in o_tagged:
             if o[1] == 'NNP' and o not in o_i:
@@ -78,6 +96,9 @@ class Extrapolate:
         for n in n_tagged:
             if n[1] == 'PRP' and n not in n_i:
                 n_i.append(n)
+
+        for o in o_i:
+            print(o, self.classifier.classify(self.gender_features(o)))
 
         # hand waving here for the moment
         if len(o_i) == 1 and len(n_i) > 0:
@@ -162,7 +183,7 @@ if __name__ == '__main__':
     sent_list.append("He decided to run away and came across a cottage. ")
     # test sentence for now is "She took a sharp sword"
     # all that really matters is that it contains sword actually
-    o_sent = "Jane took a sharp sword"
+    o_sent = "John took a sharp sword"
     print("\nTest sent:" + o_sent)
     #o_sent = raw_input("Enter a sentence: ")
 
