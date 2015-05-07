@@ -6,7 +6,7 @@ Experimental interactive storytelling comment bot
 ## Authors
 
 - Theo Pak [@theopak](http://github.com/theopak)
-- Laura
+- Laura [@ambiguouscake](https://github.com/ambiguouscake)
 
 
 ## Getting Started

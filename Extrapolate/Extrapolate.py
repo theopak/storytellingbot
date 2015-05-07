@@ -117,6 +117,9 @@ class Extrapolate:
         return n_sent
 
     def extrapolate(self, o_sent="Joan took a sharp sword", sentences=[], index=0):
+        """
+        Given a sentence, apply modifications and return a new sentence.
+        """
 
         base_o_verbs = []
         base_o_nouns = []
