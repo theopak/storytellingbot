@@ -8,6 +8,7 @@ import sqlite3
 from pprint import pprint
 import praw
 import time
+from random import randint
 from Extrapolate import Extrapolate
 
 
@@ -158,13 +159,30 @@ class Storytellingbot(object):
         number_of_rows = self.cur.fetchone()[0]
         return number_of_rows
 
-    def get_story(self):
+    def get_story(self, id=None):
         """
         Return a story from the data store.
         """
-        self.cur.execute("SELECT content FROM stories")
-        result = self.cur.fetchone()
-        return result[0] if result else None
+        # Count the number of stories in the db
+        # TODO: Finish this. Right now it simply grabs a random story.
+        self.cur.execute("SELECT Count() FROM stories")
+        res = self.cur.fetchone()
+        count = res[0] if res else None
+        if not count or (id < 0) or (id > count):
+            id = randint(0, count)
+
+        # Get all sentences from the story
+        self.cur.execute("SELECT title, source, begins, ends FROM stories")
+        stories_result = self.cur.fetchone()
+        title, source, begins, ends = stories_result
+        self.cur.execute("SELECT sentence FROM sentences WHERE id >= ? and id <= ?",
+                         (begins, ends))
+        result = self.cur.fetchall()
+
+        # Return a dict
+        return {'title': title,
+                'source': source,
+                'sentences': result}
 
     def get_all_stories(self):
         """
