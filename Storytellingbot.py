@@ -74,10 +74,21 @@ class Storytellingbot(object):
             CREATE TABLE IF NOT EXISTS stories(
                 id          integer PRIMARY KEY,-- our unique record identifier
                 title       text,               -- plaintext story title
-                content     text,               -- plaintext story
-                source      text                -- URL
+                source      text,               -- URL
+                begins      integer,
+                ends        integer,
+                FOREIGN KEY(begins) REFERENCES sentences(id),
+                FOREIGN KEY(ends) REFERENCES sentences(id)
             );'''
         self.cur.execute(query)
+        query = '''
+            CREATE TABLE IF NOT EXISTS sentences(
+                id          integer PRIMARY KEY,-- references by stories
+                sentence    text                -- one line
+            );'''
+        self.cur.execute(query)
+        # query = '''CREATE INDEX storyindex ON sentences(id);'''
+        # self.cur.execute(query)
         self.con.commit()
         if DEBUG:
             print('[INFO] Setup db')
@@ -163,6 +174,25 @@ class Storytellingbot(object):
         result = self.cur.fetchall()
         pprint(result)
         return [[s.encode('utf8') for s in t] for t in result] if result else None
+
+    def add_story(self, title, source, sentences):
+        if DEBUG:
+            print('[INFO] Storytellingbot.add_story(): adding sentences...')
+
+        # Insert into `sentences`
+        begins = ends = None
+        for s in sentences:
+            self.cur.execute('INSERT into sentences VALUES (null, ?)', (s,))
+            begins = min(self.cur.lastrowid, begins) if begins else self.cur.lastrowid
+            ends = max(self.cur.lastrowid, ends)
+            self.con.commit()
+
+        # Insert foreign keys into `stories`
+        if DEBUG:
+            print('\tinserting...', title, source, begins, ends)
+        self.cur.execute('INSERT into stories VALUES (null, ?, ?, ?, ?)',
+                         (title, source, begins, ends))
+        self.con.commit()
 
     def build_queue(self, subreddit='storytellingbottests'):
         """
