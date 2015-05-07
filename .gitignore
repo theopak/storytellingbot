@@ -58,3 +58,5 @@ target/
 
 # Passwords, keys, and other sensitive settings
 localsettings.py
+
+names.zip

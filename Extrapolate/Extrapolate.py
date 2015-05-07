@@ -19,12 +19,15 @@ import random
 
 
 class Extrapolate:
-    
+
     def __init__(self):
         self.gender_prediction_init()
-        
+
     def change_gender(self, pnoun, gender):
-        pnlist = [(("her", "female"),("him", "male")), (("she","female"),("he","male")), (("hers","female"),("his","male")), (("herself","female")("himself","male"))]
+        pnlist = [(("her", "female"), ("him", "male")),
+                  (("she", "female"), ("he", "male")),
+                  (("hers", "female"), ("his", "male")),
+                  (("herself", "female")("himself", "male"))]
         for pair in pnlist:
             for i in range(len(pair)):
                 if pair[i][0] == pnoun:
@@ -39,10 +42,12 @@ class Extrapolate:
             return pnoun
 
     def gender_features(self, word):
-        return {'last_letter': word[-1], 'last_two': word[-2:], 'last_voewl': word[-1] in 'AEIOUY'}
-        
+        return {'last_letter': word[-1], 'last_two': word[-2:],
+                'last_voewl': word[-1] in 'AEIOUY'}
+
     def gender_prediction_init(self):
-        labeled_names = ([(name, 'male') for name in names.words('male.txt')] + [(name, 'female') for name in names.words('female.txt')])
+        labeled_names = ([(name, 'male') for name in names.words('male.txt')] +
+                        [(name, 'female') for name in names.words('female.txt')])
 
         random.shuffle(labeled_names)
         featuresets = [(self.gender_features(n), gender) for (n, gender) in labeled_names]
@@ -112,7 +117,7 @@ class Extrapolate:
         return n_sent
 
     def extrapolate(self, o_sent="Joan took a sharp sword", sentences=[], index=0):
-        
+
         base_o_verbs = []
         base_o_nouns = []
         if sentences == []:
