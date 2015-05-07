@@ -92,16 +92,26 @@ class Storytellingbot(object):
         # self.cur.execute(query)
         self.con.commit()
         if DEBUG:
-            print('[INFO] Setup db')
+            print('[INFO] Setup db tables')
 
         # Populate db
-        self.cur.execute("SELECT Count() FROM keywords")
-        number_of_rows = self.cur.fetchone()[0]
-        if number_of_rows == 0:
-            sample_keywords = ['unique_keyword_20150416', 'virtualagent']
-            self.add_keywords(sample_keywords)
-            if DEBUG:
-                print('[INFO] Populated db')
+        if DEBUG:
+            self.cur.execute("SELECT Count() FROM keywords")
+            number_of_rows = self.cur.fetchone()[0]
+            if number_of_rows == 0:
+                sample_keywords = ['unique_keyword_20150416', 'virtualagent']
+                self.add_keywords(sample_keywords)
+                if DEBUG:
+                    print('[INFO] Populated sample keywords')
+            self.cur.execute("SELECT Count() FROM stories")
+            number_of_rows = self.cur.fetchone()[0]
+            if number_of_rows == 0:
+                sample_sentences = ['Once upon a time, there was a story.',
+                                    'And then a plot occurred.',
+                                    'The end.']
+                bot.add_story('title', 'source', sample_sentences)
+                if DEBUG:
+                    print('[INFO] Populated sample story')
 
     def add_keywords(self, keywords):
         if DEBUG:
@@ -277,33 +287,41 @@ class Storytellingbot(object):
             raise e
         return False
 
+    def run(self):
+        """
+        Blocking. Requires that the user is logged in.
+        Periodically check for new comments, search comments for matches,
+        enqueue responses to be posted, and then post them as the Reddit API
+        rate limit allows so.
+        TODO: pass a loop iteration if the bot cannot connect to reddit.
+        """
+        while True:
+            try:
+                self.build_queue()
+                pass
+            except Exception, e:
+                print('[ERROR] Storytellingbot.build_queue():', e)
+                raise e
+
+            available = True
+            while available:
+                available = self.send_one()
+
+            # Reddit enforces rate limits.
+            # Accounts need karma.
+            print('[INFO] main(): Sleeping for 10 minutes…')
+            time.sleep(600)
+
 
 def main():
     """
     Login as the bot using the username and password from `localsettings.py`.
-    Periodically check for new comments, search comments for matches, and then
-    enqueue responses to be posted when the Reddit API rate limit allows it.
+    Use `Storytellingbot.run()` to run the bot indefinitely.
     """
     bot = Storytellingbot(USERNAME, PASSWORD)
-    # bot.get_all_stories()
-    # return
-    while True:
-        try:
-            bot.build_queue()
-            pass
-        except Exception, e:
-            print('[ERROR] Storytellingbot.build_queue():', e)
-            raise e
-
-        available = True
-        while available:
-            available = bot.send_one()
-
-        # Reddit enforces rate limits.
-        # Accounts need karma.
-        print('[INFO] main(): Sleeping for 10 minutes…')
-        time.sleep(600)
-
+    # bot.run()
+    r = bot.get_story()
+    print(r)
 
 if __name__ == '__main__':
     DEBUG = 1
