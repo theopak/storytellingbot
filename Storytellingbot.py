@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python3
 # coding: utf-8
 
 
@@ -28,7 +28,7 @@ class Storytellingbot(object):
         Login to Reddit. OAuth2 bots gave a rate limit twice as high.
         """
         if DEBUG:
-            print('[INFO] Storytellingbot.__init__() called…')
+            print('[INFO] Storytellingbot.__init__() called...')
         self.con = sqlite3.connect(db_file)
         self.cur = self.con.cursor()
         self.setup()
@@ -42,7 +42,7 @@ class Storytellingbot(object):
         Remove any locks on the data layer.
         """
         if DEBUG:
-            print('[INFO] Storytellingbot.__del__() called…')
+            print('[INFO] Storytellingbot.__del__() called...')
         self.con.close()
         if DEBUG:
             print('\tClosed db connection.')
@@ -224,7 +224,7 @@ class Storytellingbot(object):
             print('[INFO] Storytellingbot.send_one(): sent response to ' + id)
             return True
             pass
-        except Exception, e:
+        except (Exception, e):
             print('[ERROR] Storytellingbot.build_queue():', e)
             raise e
         return False
@@ -243,7 +243,7 @@ def main():
         try:
             bot.build_queue()
             pass
-        except Exception, e:
+        except (Exception, e):
             print('[ERROR] Storytellingbot.build_queue():', e)
             raise e
 
