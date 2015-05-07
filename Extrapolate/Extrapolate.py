@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python3
 
 
 #import nltk
@@ -54,34 +54,13 @@ class Extrapolate:
         train_set, test_set = featuresets[500:], featuresets[:500]
         self.classifier = NaiveBayesClassifier.train(train_set)
 
-    # returns all the verbs, nouns, and adjs found in a given sentence
-    def tag_sent(self, sent):
-        tverbs = []
-        tnouns = []
-        tadjs = []
-
-        tagged = pos_tag(word_tokenize(sent))
-
-        print(tagged)
-
-        for item in tagged:
-                if item[1][0] == 'V':
-                    tverbs.append(item[0])
-                elif item[1] == 'NN' or item[1] == 'NNS':
-                    tnouns.append(item[0])
-                elif item[1][0] == 'J':
-                    tadjs.append(item[0])
-
-        return tverbs, tnouns, tadjs
-
-    def find_synonyms(self, words, wpos):
+    def find_synonyms(self, w, wpos):
         syn_words = []
-        for w in words:
-            synsets = wordnet.synsets(w, pos=wpos)
-            #print("Synsets for", w, "are:", synsets)
-            for s in synsets:
-                for l in s.lemmas():
-                    syn_words.append(l.name())
+        synsets = wordnet.synsets(w, pos=wpos)
+        #print("Synsets for", w, "are:", synsets)
+        for s in synsets:
+            for l in s.lemmas():
+                syn_words.append(l.name())
         return syn_words
 
     def replace_proper_nouns(self, o_sent, n_sent):
@@ -116,60 +95,67 @@ class Extrapolate:
 
         return n_sent
 
-    def extrapolate(self, o_sent="Joan took a sharp sword", sentences=[], index=0):
+    def strip_pos_copy(self, tag):
+        new_tag = []
+        
+        for item in tag:
+            new_tag.append(item[0])
+        
+        return new_tag
+        
+    def extrapolate(self, sent):
 
-        base_o_verbs = []
-        base_o_nouns = []
-        if sentences == []:
-            sentences = self.sentences
-        if index < 1:
-            index = random.randint(0, len(sentences)-1)
+        # tags the part of speech in each word
+        tagged = pos_tag(word_tokenize(sent))
+        
+        tag_list = []
+        for item in tagged:
+            tag_list.append(list(item))
+        
+        # puts nouns and verbs in their base form
+        for idx, item in enumerate(tag_list):
+            if item[1][0] == 'V':
+                tag_list[idx][0] = wnl().lemmatize(item[0],'v')
+            elif item[1] == 'NN' or item[1] == 'NNS':
+                tag_list[idx][0] = wnl().lemmatize(item[0],'n')
+                
+        synonyms = [[] for i in range(len(tag_list))]
+        
+        # finds synonyms for each wnoun, verb, adj in tag_list -> puts in corresponding index in synonyms
+        for idx, item in enumerate(tag_list):
+            if item[1][0] == 'V':
+                synonyms[idx] = self.find_synonyms(item[0], wordnet.VERB)
+            elif item[1] == 'NN' or item[1] == 'NNS':
+                synonyms[idx] = self.find_synonyms(item[0], wordnet.NOUN)
+            elif item[1][0] == 'J':
+                synonyms[idx] = self.find_synonyms(item[0], wordnet.ADJ)
 
-        (o_verbs, o_nouns, o_adjs) = self.tag_sent(o_sent)
-
-        print("\nShowing all verbs, nouns and adjctives in the sentence: \n" + o_sent)
-        print("Verbs:", o_verbs)
-        print("Nouns:", o_nouns)
-        print("Adjectives:", o_adjs)
-
-        print("\nShowing nouns and verbs in base form: ")
-        for v in range(len(o_verbs)):
-            base_o_verbs.append(wnl().lemmatize(o_verbs[v],'v'))
-            print(o_verbs[v]+"-->"+base_o_verbs[v])
-        for n in range(len(o_nouns)):
-            base_o_nouns.append(wnl().lemmatize(o_nouns[n],'n'))
-            print(o_nouns[n]+"-->"+base_o_nouns[n])
-
-        s_verbs = self.find_synonyms(base_o_verbs, wordnet.VERB)
-        s_nouns = self.find_synonyms(base_o_nouns, wordnet.NOUN)
-        s_adjs = self.find_synonyms(o_adjs, wordnet.ADJ)
-
-        s_verbs = list(set(s_verbs))
-        s_nouns = list(set(s_nouns))
-        s_adjs = list(set(s_adjs))
-
-        print("\nVerb synonyms list:")
-        for a in s_verbs:
-            print(a),
-
-        print("\n\nNoun synonyms list:")
-        for b in s_nouns:
-            print(b),
-
-        print("\n\nAdjective synonyms list:")
-        for c in s_adjs:
-            print(c),
-
-        print("\nThe original sentence is:")
-        print(sentences[index])
-        n_sent = self.replace_proper_nouns(o_sent, sentences[index])
-        print("\nThe modified sentence is:")
-        print(n_sent)
-
-        return n_sent
+        # gets rid of duplicates
+        for s in synonyms:
+            s = list(set(s))
+            print(s)
+        
+        search_sent = []
+        # creates a list of similar sentences to search for
+        for idx, item in enumerate(tag_list):
+            # looks for synonyms at the corresponding index, 
+            for s in synonyms[idx]:
+                temp = self.strip_pos_copy(tag_list)
+                temp[idx] = s
+                search_sent.append(temp)
+        
+        #need to combine sentence parts into a sentence
+        
+        # will get rid of duplicates once i make it hashable
+        #search_sent = list(set(search_sent))
+        
+        for s in search_sent:
+            print(s)
+        return search_sent
 
 
 if __name__ == '__main__':
+    #list of pretend sentences to search through
     sent_list = []
     sent_list.append("She danced with the prince and they fell in love.")
     sent_list.append("The emperor realized he was swindled but continues the parade anyway.")
@@ -186,17 +172,25 @@ if __name__ == '__main__':
     sent_list.append("The wolf fell into it and died.")
     sent_list.append("A fairy granted her wish and gave her a seed to plant. ")
     sent_list.append("He decided to run away and came across a cottage. ")
-    # test sentence for now is "She took a sharp sword"
-    # all that really matters is that it contains sword actually
+    
+    #instantiating extrapolate class, TAKES NOTHING
+    e = Extrapolate()
+    
+    #expected input from storytellingbot
     o_sent = "John took a sharp sword"
-    print("\nTest sent:" + o_sent)
+    print("\nInput:" + o_sent)
     #o_sent = raw_input("Enter a sentence: ")
 
+    search_sent = e.extrapolate(o_sent)
+    
+    #MAGIC OF FINDING A SENTENCE IN THE DATABASE GO!!!!!
+    
     index = 11
     #index = random.randint(0, len(sent_list)-1)
     print("Test index: "+ str(index+1))
-    #index = int(raw_input("Enter a number between 1 and "+str(len(sent_list))+": "))-1
+    
+   #output = customize(sent_list[index])
+    
+    #this would be the post
 
-
-    e = Extrapolate()
-    e.extrapolate(o_sent, sent_list, index)
+    
