@@ -27,7 +27,7 @@ class Extrapolate:
         pnlist = [(("her", "female"), ("him", "male")),
                   (("she", "female"), ("he", "male")),
                   (("hers", "female"), ("his", "male")),
-                  (("herself", "female")("himself", "male"))]
+                  (("herself", "female"), ("himself", "male"))]
         for pair in pnlist:
             for i in range(len(pair)):
                 if pair[i][0] == pnoun:
@@ -43,11 +43,11 @@ class Extrapolate:
 
     def gender_features(self, word):
         return {'last_letter': word[-1], 'last_two': word[-2:],
-                'last_voewl': word[-1] in 'AEIOUY'}
+                'last_vowel': word[-1] in 'AEIOUY'}
 
     def gender_prediction_init(self):
         labeled_names = ([(name, 'male') for name in names.words('male.txt')] +
-                        [(name, 'female') for name in names.words('female.txt')])
+                         [(name, 'female') for name in names.words('female.txt')])
 
         random.shuffle(labeled_names)
         featuresets = [(self.gender_features(n), gender) for (n, gender) in labeled_names]
