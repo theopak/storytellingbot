@@ -175,30 +175,33 @@ class Storytellingbot(object):
         """
         # Count the number of stories in the db
         # TODO: Finish this. Right now it simply grabs a random story.
-        self.cur.execute("SELECT Count() FROM stories")
+        self.cur.execute('SELECT Count() FROM stories')
         res = self.cur.fetchone()
         count = res[0] if res else None
-        if not count or (id < 0) or (id > count):
-            id = randint(0, count)
+        if not count or not id or (id < 1) or (id > count):
+            id = randint(1, count)
 
         # Get all sentences from the story
-        self.cur.execute("SELECT title, source, begins, ends FROM stories")
+        if DEBUG:
+            print('[INFO] get_story()', id, 'out of', count)
+        self.cur.execute('SELECT id, title, source, begins, ends FROM stories')
         stories_result = self.cur.fetchone()
-        title, source, begins, ends = stories_result
-        self.cur.execute("SELECT sentence FROM sentences WHERE id >= ? and id <= ?",
+        id, title, source, begins, ends = stories_result
+        self.cur.execute('SELECT sentence FROM sentences WHERE id >= ? and id <= ?',
                          (begins, ends))
         result = self.cur.fetchall()
 
         # Return a dict
-        return {'title': title,
+        return {'id': id,
+                'title': title,
                 'source': source,
                 'sentences': result}
 
     def get_all_stories(self):
         """
-        Return all story from the data store.
+        Return all stories from the data store.
         """
-        self.cur.execute("SELECT content FROM stories")
+        self.cur.execute('SELECT content FROM stories')
         result = self.cur.fetchall()
         pprint(result)
         return [[s.encode('utf8') for s in t] for t in result] if result else None
@@ -212,7 +215,7 @@ class Storytellingbot(object):
         for s in sentences:
             self.cur.execute('INSERT into sentences VALUES (null, ?)', (s,))
             begins = min(self.cur.lastrowid, begins) if begins else self.cur.lastrowid
-            ends = max(self.cur.lastrowid, ends)
+            ends = max(self.cur.lastrowid, ends) if ends else self.cur.lastrowid
             self.con.commit()
 
         # Insert foreign keys into `stories`
@@ -322,9 +325,13 @@ def main():
     Use `Storytellingbot.run()` to run the bot indefinitely.
     """
     bot = Storytellingbot(USERNAME, PASSWORD)
-    bot.run()
-    # r = bot.get_story()
+    # bot.run()
+    r = bot.get_story()
     print(r)
+
+    # Add stories
+    # with open('Harry Potter and the Goblet of Fire - J.K. Rowling.txt') as f:
+    #     bot.add_story('Harry Potter 4', 'pdf to txt', f.readlines())
 
 
 if __name__ == '__main__':
