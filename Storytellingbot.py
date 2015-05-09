@@ -8,6 +8,7 @@ import sqlite3
 from pprint import pprint
 import praw
 import time
+from random import randint
 from Extrapolate import Extrapolate
 
 
@@ -74,29 +75,50 @@ class Storytellingbot(object):
             CREATE TABLE IF NOT EXISTS stories(
                 id          integer PRIMARY KEY,-- our unique record identifier
                 title       text,               -- plaintext story title
-                content     text,               -- plaintext story
-                source      text                -- URL
+                source      text,               -- URL
+                begins      integer,
+                ends        integer,
+                FOREIGN KEY(begins) REFERENCES sentences(id),
+                FOREIGN KEY(ends) REFERENCES sentences(id)
             );'''
         self.cur.execute(query)
+        query = '''
+            CREATE TABLE IF NOT EXISTS sentences(
+                id          integer PRIMARY KEY,-- references by stories
+                sentence    text                -- one line
+            );'''
+        self.cur.execute(query)
+        # query = '''CREATE INDEX storyindex ON sentences(id);'''
+        # self.cur.execute(query)
         self.con.commit()
         if DEBUG:
-            print('[INFO] Setup db')
+            print('[INFO] Setup db tables')
 
         # Populate db
-        self.cur.execute("SELECT Count() FROM keywords")
-        number_of_rows = self.cur.fetchone()[0]
-        if number_of_rows == 0:
-            sample_keywords = ['unique_keyword_20150416', 'virtualagent']
-            self.add_keywords(sample_keywords)
-            if DEBUG:
-                print('[INFO] Populated db')
+        if DEBUG:
+            self.cur.execute("SELECT Count() FROM keywords")
+            number_of_rows = self.cur.fetchone()[0]
+            if number_of_rows == 0:
+                sample_keywords = ['unique_keyword_20150416', 'virtualagent']
+                self.add_keywords(sample_keywords)
+                if DEBUG:
+                    print('[INFO] Populated sample keywords')
+            self.cur.execute("SELECT Count() FROM stories")
+            number_of_rows = self.cur.fetchone()[0]
+            if number_of_rows == 0:
+                sample_sentences = ['Once upon a time, there was a story.',
+                                    'And then a plot occurred.',
+                                    'The end.']
+                bot.add_story('title', 'source', sample_sentences)
+                if DEBUG:
+                    print('[INFO] Populated sample story')
 
     def add_keywords(self, keywords):
         if DEBUG:
             print('[INFO] Storytellingbot.add_keywords(): adding keywords to db:')
         for word in keywords:
             if DEBUG:
-                print('\t' + word)
+                print('\t', word)
             self.cur.execute('INSERT into keywords VALUES (?)', (word,))
             self.con.commit()
 
@@ -123,13 +145,13 @@ class Storytellingbot(object):
         Add the given comment and response to the outbox, ready to send.
         """
         if DEBUG:
-            print('[INFO] Storytellingbot.enqueue_response():' +
-                  '\n\tkeyword: ' + keyword + ', id: ' + comment.id +
-                  ', parent_id: ' + comment.parent_id +
-                  '\n\tbody: ' + comment.body + '\n\tresponse: ' + response)
+            print('[INFO] Storytellingbot.enqueue_response():',
+                  '\n\tkeyword:', keyword, ', id:', comment.id,
+                  ', parent_id:', comment.parent_id,
+                  '\n\tbody:', comment.body, '\n\tresponse:', response)
             # pprint(vars(comment))
         self.cur.execute("INSERT INTO outbox VALUES (null, 0, ?, ?, ?, ?, ?, ?)",
-                         (keyword, comment.id, comment.parent_id, comment.link_url, comment.body, response))
+                         (keyword, comment.id, comment.parent_id, comment.link_url, comment.body, str(response)))
         self.con.commit()
 
     def mark_sent(self, id):
@@ -147,13 +169,30 @@ class Storytellingbot(object):
         number_of_rows = self.cur.fetchone()[0]
         return number_of_rows
 
-    def get_story(self):
+    def get_story(self, id=None):
         """
         Return a story from the data store.
         """
-        self.cur.execute("SELECT content FROM stories")
-        result = self.cur.fetchone()
-        return result[0] if result else None
+        # Count the number of stories in the db
+        # TODO: Finish this. Right now it simply grabs a random story.
+        self.cur.execute("SELECT Count() FROM stories")
+        res = self.cur.fetchone()
+        count = res[0] if res else None
+        if not count or (id < 0) or (id > count):
+            id = randint(0, count)
+
+        # Get all sentences from the story
+        self.cur.execute("SELECT title, source, begins, ends FROM stories")
+        stories_result = self.cur.fetchone()
+        title, source, begins, ends = stories_result
+        self.cur.execute("SELECT sentence FROM sentences WHERE id >= ? and id <= ?",
+                         (begins, ends))
+        result = self.cur.fetchall()
+
+        # Return a dict
+        return {'title': title,
+                'source': source,
+                'sentences': result}
 
     def get_all_stories(self):
         """
@@ -163,6 +202,25 @@ class Storytellingbot(object):
         result = self.cur.fetchall()
         pprint(result)
         return [[s.encode('utf8') for s in t] for t in result] if result else None
+
+    def add_story(self, title, source, sentences):
+        if DEBUG:
+            print('[INFO] Storytellingbot.add_story(): adding sentences...')
+
+        # Insert into `sentences`
+        begins = ends = None
+        for s in sentences:
+            self.cur.execute('INSERT into sentences VALUES (null, ?)', (s,))
+            begins = min(self.cur.lastrowid, begins) if begins else self.cur.lastrowid
+            ends = max(self.cur.lastrowid, ends)
+            self.con.commit()
+
+        # Insert foreign keys into `stories`
+        if DEBUG:
+            print('\tinserting...', title, source, begins, ends)
+        self.cur.execute('INSERT into stories VALUES (null, ?, ?, ?, ?)',
+                         (title, source, begins, ends))
+        self.con.commit()
 
     def build_queue(self, subreddit='storytellingbottests'):
         """
@@ -176,20 +234,20 @@ class Storytellingbot(object):
         for comment in comments:
             if self.queue_contains(comment.id):
                 if DEBUG:
-                    print('\tcomment ' + comment.id + ' is already enqueued')
+                    print('\tcomment', comment.id, 'is already enqueued')
                 continue
             if comment.author is self.reddit.user:
                 if DEBUG:
-                    print('\tcomment ' + comment.id + ' is the bot\'s own comment')
+                    print('\tcomment', comment.id, 'is the bot\'s own comment')
                 continue
             first_matched_keyword = self.search(comment.body)
             if first_matched_keyword is None:
                 if DEBUG:
-                    print('\tcomment ' + comment.id + ' contains no keywords')
+                    print('\tcomment', comment.id, 'contains no keywords')
                 continue
             # Else, queue a response
             if DEBUG:
-                print('\tcomment_id ' + comment.id + ' matched ' + first_matched_keyword)
+                print('\tcomment_id', comment.id, 'matched', first_matched_keyword)
             # response = self.e.extrapolate(comment.body, self.get_all_stories())
             response = self.e.extrapolate(comment.body)
             self.enqueue_response(comment, response, first_matched_keyword)
@@ -210,51 +268,63 @@ class Storytellingbot(object):
         id, linkUrl, response = item
         if response is '':
             if DEBUG:
-                print('[INFO] Storytellingbot.send_one(): can\'t send ' + id +
+                print('[INFO] Storytellingbot.send_one(): can\'t send', id,
                       'because there is no prepared response')
             return False
+
+        # Debug
+        if DEBUG:
+            print('\t', id, linkUrl, response)
 
         # Load the related comment object from Reddit (if it still exists)
         # and then post the outbox item as a reply to the Reddit comment.
         try:
             submission = self.reddit.get_submission(linkUrl + id)
-            # reply = submission.comments[0].reply(response)
-            # print(reply)
+            reply = submission.comments[0].reply(response)
             self.mark_sent(id)
-            print('[INFO] Storytellingbot.send_one(): sent response to ' + id)
+            print('[INFO] Storytellingbot.send_one(): sent response to', id, ':', reply)
             return True
             pass
-        except (Exception, e):
+        except Exception as e:
             print('[ERROR] Storytellingbot.build_queue():', e)
             raise e
         return False
+
+    def run(self):
+        """
+        Blocking. Requires that the user is logged in.
+        Periodically check for new comments, search comments for matches,
+        enqueue responses to be posted, and then post them as the Reddit API
+        rate limit allows so.
+        TODO: pass a loop iteration if the bot cannot connect to reddit.
+        """
+        while True:
+            try:
+                self.build_queue()
+                pass
+            except Exception as e:
+                print('[ERROR] Storytellingbot.build_queue():', e)
+                raise e
+
+            available = True
+            while available:
+                available = self.send_one()
+
+            # Reddit enforces rate limits.
+            # Accounts need karma.
+            print('[INFO] main(): Sleeping for 10 minutes…')
+            time.sleep(600)
 
 
 def main():
     """
     Login as the bot using the username and password from `localsettings.py`.
-    Periodically check for new comments, search comments for matches, and then
-    enqueue responses to be posted when the Reddit API rate limit allows it.
+    Use `Storytellingbot.run()` to run the bot indefinitely.
     """
     bot = Storytellingbot(USERNAME, PASSWORD)
-    # bot.get_all_stories()
-    # return
-    while True:
-        try:
-            bot.build_queue()
-            pass
-        except (Exception, e):
-            print('[ERROR] Storytellingbot.build_queue():', e)
-            raise e
-
-        available = True
-        while available:
-            available = bot.send_one()
-
-        # Reddit enforces rate limits.
-        # Accounts need karma.
-        print('[INFO] main(): Sleeping for 10 minutes…')
-        time.sleep(600)
+    bot.run()
+    # r = bot.get_story()
+    print(r)
 
 
 if __name__ == '__main__':
