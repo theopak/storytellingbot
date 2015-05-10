@@ -7,6 +7,7 @@ from nltk import pos_tag
 from nltk import NaiveBayesClassifier
 from nltk.corpus import wordnet
 from nltk.corpus import names
+import nltk.fuf.linearizer
 from nltk.stem.wordnet import WordNetLemmatizer as wnl
 from re import sub
 import string
@@ -144,10 +145,15 @@ class Extrapolate:
                 temp[idx] = s
                 search_sent.append(temp)
         
+        for sdx, s in enumerate(search_sent):
+            result = ' '.join(s).replace(' ,',',').replace(' .','.').replace(' !','!')
+            result = result.replace(' ?','?').replace(' : ',': ').replace(' \'', '\'').replace('_',' ')
+            search_sent[sdx] = result
+        
         #need to combine sentence parts into a sentence
         
         # will get rid of duplicates once i make it hashable
-        #search_sent = list(set(search_sent))
+        search_sent = list(set(search_sent))
         
         for s in search_sent:
             print(s)
