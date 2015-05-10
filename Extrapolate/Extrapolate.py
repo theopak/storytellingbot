@@ -23,8 +23,6 @@ class Extrapolate:
         self.gp = genderPredictor.genderPredictor()
         accuracy=self.gp.trainAndTest()
         feats=self.gp.getMostInformativeFeatures(10)
-        nametest = "Stephen"
-        print ('\n'+nametest+' is classified as', self.gp.classify(nametest))
 
     def change_gender(self, pnoun, gender):
         pnlist = [(("her", "F"), ("him", "M")),
@@ -119,7 +117,7 @@ class Extrapolate:
         # gets rid of duplicates
         for s in synonyms:
             s = list(set(s))
-            #print(s)
+            print(s)
         
         search_sent = []
         # creates a list of similar sentences to search for
@@ -138,8 +136,8 @@ class Extrapolate:
         # will get rid of duplicates once i make it hashable
         search_sent = list(set(search_sent))
         
-        #for s in search_sent:
-            #print(s)
+        for s in search_sent:
+            print(s)
         return search_sent
 
 
@@ -176,7 +174,8 @@ if __name__ == '__main__':
     
     index = 10
     #index = random.randint(0, len(sent_list)-1)
-    print("Test index: "+ str(index+1))
+    print("\nTest index: "+ str(index+1))
+    print(sent_list[index])
     
     output = e.customize(o_sent, sent_list[index])
     print(output)
