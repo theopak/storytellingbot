@@ -10,7 +10,7 @@ from nltk.stem.wordnet import WordNetLemmatizer as wnl
 from re import sub
 import string
 import random
-from .genderPredictor import genderPredictor
+from genderPredictor import genderPredictor
 #nltk.download()
 # nltk downloads: maxent_ne_chunker, maxent_treebank_pos_tagger, punkt, wordnet
 # install numpy
@@ -180,8 +180,8 @@ if __name__ == '__main__':
 
     #expected input from storytellingbot
     o_sent = "Stephen took a sharp sword"
-    print("\nInput:" + o_sent)
-    #o_sent = raw_input("Enter a sentence: ")
+    #print("\nInput:" + o_sent)
+    o_sent = input("Enter a sentence: ")
 
     search_sent = e.extrapolate(o_sent)
 
@@ -190,6 +190,7 @@ if __name__ == '__main__':
     index = 10
     #index = random.randint(0, len(sent_list)-1)
     #print("\nTest index: "+ str(index+1))
+    index = int(input("Enter a number between 1 and "+str(len(sent_list))+": "))-1
     #print(sent_list[index])
 
     output = e.transform(o_sent, sent_list[index])
