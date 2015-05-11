@@ -21,6 +21,12 @@ git clone --recursive https://github.com/theopak/storytellingbot.git
 cd storytellingbot
 ```
 
+Use these regex for data aquisition:
+
+```regex
+s/^[^"][^a-z]*$//g
+s/\n\n/\n/g
+```
 
 ## Open Source
 
