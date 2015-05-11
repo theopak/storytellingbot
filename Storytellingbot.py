@@ -8,7 +8,7 @@ import sqlite3
 from pprint import pprint
 import praw
 import time
-from random import randint
+from random import randint, choice
 from Extrapolate import Extrapolate
 
 
@@ -21,6 +21,7 @@ class Storytellingbot(object):
     """
 
     e = Extrapolate.Extrapolate()
+    metaText = '\n\n---\n[^about ^this ^bot](/r/storytellingbottests/wiki/index)'
 
     def __init__(self, username, password, db_file='local.db',
                  user_agent='Python:storytellingbot:v0.0.0 (by /u/theopakalyse)'):
@@ -55,18 +56,6 @@ class Storytellingbot(object):
         TODO(@theopak): Create a test subreddit if it does not exist.
         """
         query = '''
-            CREATE TABLE IF NOT EXISTS outbox(
-                number      integer PRIMARY KEY,-- our unique record identifier
-                sent        datetime,           -- 0 if not sent, otherwise timestamp
-                keyword     text,               -- keyword that was matched
-                id          text,               -- reddit id (hash) of matched comment
-                parentId    text,               -- reddit id (hash) of parent comment
-                linkUrl     text,               -- permalink of the Submission
-                body        text,               -- plaintext body of matched comment
-                response    text                -- plaintext body to post as reply
-            );'''
-        self.cur.execute(query)
-        query = '''
             CREATE TABLE IF NOT EXISTS keywords(
                 word        text UNIQUE         -- one word or phrase to search for
             );'''
@@ -86,6 +75,20 @@ class Storytellingbot(object):
             CREATE TABLE IF NOT EXISTS sentences(
                 id          integer PRIMARY KEY,-- references by stories
                 sentence    text                -- one line
+            );'''
+        self.cur.execute(query)
+        query = '''
+            CREATE TABLE IF NOT EXISTS outbox(
+                number      integer PRIMARY KEY,-- our unique record identifier
+                sent        datetime,           -- 0 if not sent, otherwise timestamp
+                keyword     text,               -- keyword that was matched
+                id          text,               -- reddit id (hash) of matched comment
+                parentId    text,               -- reddit id (hash) of parent comment
+                linkUrl     text,               -- permalink of the Submission
+                seed        integer,            -- story ID that seeded the response
+                body        text,               -- plaintext body of matched comment
+                response    text,               -- plaintext body to post as reply
+                FOREIGN KEY(seed) REFERENCES stories(id)
             );'''
         self.cur.execute(query)
         # query = '''CREATE INDEX storyindex ON sentences(id);'''
@@ -126,32 +129,33 @@ class Storytellingbot(object):
         """
         Return True if the given comment id is in the queue.
         """
-        self.cur.execute("SELECT * FROM outbox WHERE id=?", (id,))
+        self.cur.execute('SELECT * FROM outbox WHERE id=?', (id,))
         result = self.cur.fetchone()
         # if DEBUG: print('[INFO] Storytellingbot.queue_contains(' + id + '):\n\t', result)
         return True if result else False
 
-    def search(self, text):
+    def find_keyword(self, text):
         """
         Return the first match found in the input text, or otherwise None.
         """
         self.cur.execute("SELECT * FROM keywords WHERE instr(?, word) > 0", (text,))
         result = self.cur.fetchone()
-        # if DEBUG: print('[INFO] Storytellingbot.search(' + text + '):\n\t', result)
+        # if DEBUG: print('[INFO] Storytellingbot.find_keyword(' + text + '):\n\t', result)
         return result[0] if result else None
 
-    def enqueue_response(self, comment, response, keyword):
+    def enqueue_response(self, comment, response, keyword, story_id):
         """
         Add the given comment and response to the outbox, ready to send.
         """
         if DEBUG:
             print('[INFO] Storytellingbot.enqueue_response():',
                   '\n\tkeyword:', keyword, ', id:', comment.id,
-                  ', parent_id:', comment.parent_id,
+                  ', parent_id:', comment.parent_id, ', parent_url; [...]',
+                  ', seed:', story_id,
                   '\n\tbody:', comment.body, '\n\tresponse:', response)
             # pprint(vars(comment))
-        self.cur.execute("INSERT INTO outbox VALUES (null, 0, ?, ?, ?, ?, ?, ?)",
-                         (keyword, comment.id, comment.parent_id, comment.link_url, comment.body, str(response)))
+        self.cur.execute("INSERT INTO outbox VALUES (null, 0, ?, ?, ?, ?, ?, ?, ?)",
+                         (keyword, comment.id, comment.parent_id, comment.link_url, story_id, comment.body, str(response)))
         self.con.commit()
 
     def mark_sent(self, id):
@@ -206,6 +210,46 @@ class Storytellingbot(object):
         pprint(result)
         return [[s.encode('utf8') for s in t] for t in result] if result else None
 
+    def find_sentence_helper(self, candidates):
+        """
+        TODO: Replace this super hacky function.
+        """
+        # sql = ''
+        # for sentence in candidates:
+        #     sql = sql + '?, '
+        # sql = '(' + sql[:-2] + ')'
+
+        # First try to find a real match
+        for sentence in candidates:
+            # self.cur.execute('SELECT id, sentence FROM sentences WHERE sentence LIKE ANY ' + sql, (candidates,))
+            self.cur.execute('SELECT id, sentence FROM sentences WHERE sentence LIKE ?',
+                             ('%' + sentence + '%',))
+            match = self.cur.fetchone()
+            if not (match is None):
+                return match
+
+        # Otherwise, guess at random
+        self.cur.execute('SELECT id, sentence FROM sentences')
+        match = self.cur.fetchone()
+        return match
+
+    def find_sentence(self, candidates):
+        # find the first sentence that matches a candidate
+        if DEBUG:
+            print('[INFO] Storytellingbot.find_sentence() similar to one of:')
+            for sentence in candidates:
+                print('\t', sentence)
+        sentence_id, sentence = self.find_sentence_helper(candidates)
+        if DEBUG:
+            print('\t', sentence_id, ':', sentence)
+            input('!!!!!!!!!!!!!!!')
+
+        # correlate sentence ID to story ID
+        self.cur.execute('SELECT id FROM stories WHERE begins <= ? and ends >= ?',
+                         (sentence_id, sentence_id))
+        seed = self.cur.fetchone()
+        return seed, sentence
+
     def add_story(self, title, source, sentences):
         if DEBUG:
             print('[INFO] Storytellingbot.add_story(): adding sentences...')
@@ -230,30 +274,51 @@ class Storytellingbot(object):
         Build a work queue.
         TODO(@theopak): Enqueue responses to replies to responses, regardless
                         of whether they contain any keywords.
+        TODO(@theopak): Separate response generation into a separate thread.
         """
-        if DEBUG:
-            print('[INFO] Storytellingbot.build_queue()')
+        dtext = '[INFO] Storytellingbot.build_queue()\n'
         comments = self.reddit.get_comments(subreddit)
         for comment in comments:
             if self.queue_contains(comment.id):
-                if DEBUG:
-                    print('\tcomment', comment.id, 'is already enqueued')
+                # if DEBUG:
+                #     print(dtext, '\tcomment', comment.id, 'is already enqueued')
                 continue
             if comment.author is self.reddit.user:
-                if DEBUG:
-                    print('\tcomment', comment.id, 'is the bot\'s own comment')
+                # if DEBUG:
+                #     print(dtxt, '\tcomment', comment.id, 'is the bot\'s own comment')
                 continue
-            first_matched_keyword = self.search(comment.body)
+            first_matched_keyword = self.find_keyword(comment.body)
             if first_matched_keyword is None:
-                if DEBUG:
-                    print('\tcomment', comment.id, 'contains no keywords')
+                # if DEBUG:
+                #     print(dtext, '\tcomment', comment.id, 'contains no keywords')
                 continue
             # Else, queue a response
             if DEBUG:
-                print('\tcomment_id', comment.id, 'matched', first_matched_keyword)
+                print(dtext, '\tcomment_id:', comment.id, 'first_matched_keyword:', first_matched_keyword)
             # response = self.e.extrapolate(comment.body, self.get_all_stories())
-            response = self.e.extrapolate(comment.body)
-            self.enqueue_response(comment, response, first_matched_keyword)
+            # response = self.e.extrapolate(comment.body)
+            # nearest_match = self.get_story()
+            # nearest_match_sentence = choice(nearest_match['sentences'])[0].rstrip()
+
+            # nearest_match_sentence = find_sentence(candidates, nearest_match['sentences'])
+            candidates = self.e.extrapolate(comment.body)
+            matched_seed, matched_sentence = self.find_sentence(candidates)
+            if DEBUG:
+                print('\t\tmatch', matched_seed, ':', matched_sentence)
+            response = self.e.transform(comment.body, matched_sentence)
+            if DEBUG:
+                print('\t\tresponse:', response)
+            self.enqueue_response(comment, response, first_matched_keyword, matched_seed)
+
+    def build_citation(self, story_id):
+        """
+        Generate a Markdown-formatted citation of the given story.
+        """
+        self.cur.execute('SELECT title, source FROM stories WHERE id=?', (story_id,))
+        title, source = self.cur.fetchone()
+        out = 'this comment was algorithmically generated based on ' + \
+              title + ' via “' + source + '”'
+        return '^' + out.replace(' ', ' ^')
 
     def send_one(self):
         """
@@ -262,13 +327,13 @@ class Storytellingbot(object):
         """
 
         # Get the oldest unsent comment from the queue
-        self.cur.execute("SELECT id, linkUrl, response FROM outbox WHERE sent=0 LIMIT 1")
+        self.cur.execute('SELECT id, linkUrl, seed, response FROM outbox WHERE sent=0 LIMIT 1')
         item = self.cur.fetchone()
         if item is None:
-            if DEBUG:
-                print('[INFO] Storytellingbot.send_one(): all items sent')
+            # if DEBUG:
+            #     print('[INFO] Storytellingbot.send_one(): all items sent')
             return False
-        id, linkUrl, response = item
+        id, linkUrl, seed, response = item
         if response is '':
             if DEBUG:
                 print('[INFO] Storytellingbot.send_one(): can\'t send', id,
@@ -283,13 +348,14 @@ class Storytellingbot(object):
         # and then post the outbox item as a reply to the Reddit comment.
         try:
             submission = self.reddit.get_submission(linkUrl + id)
-            reply = submission.comments[0].reply(response)
+            footer = self.metaText + ' ^| ' + self.build_citation(seed)
+            reply = submission.comments[0].reply(response + footer)
             self.mark_sent(id)
-            print('[INFO] Storytellingbot.send_one(): sent response to', id, ':', reply)
+            print('[INFO] Storytellingbot.send_one(): sent response to', id, '\n\t', response)
             return True
             pass
         except Exception as e:
-            print('[ERROR] Storytellingbot.build_queue():', e)
+            print('[ERROR] Storytellingbot.send_one():', e)
             raise e
         return False
 
@@ -301,6 +367,7 @@ class Storytellingbot(object):
         rate limit allows so.
         TODO: pass a loop iteration if the bot cannot connect to reddit.
         """
+        print('Running bot at maximum limits auto-enforced by API wrapper...')
         while True:
             try:
                 self.build_queue()
@@ -315,8 +382,8 @@ class Storytellingbot(object):
 
             # Reddit enforces rate limits.
             # Accounts need karma.
-            print('[INFO] main(): Sleeping for 10 minutes…')
-            time.sleep(600)
+            # print('[INFO] main(): Sleeping for 10 minutes…')
+            # time.sleep(600)
 
 
 def main():
@@ -325,8 +392,8 @@ def main():
     Use `Storytellingbot.run()` to run the bot indefinitely.
     """
     bot = Storytellingbot(USERNAME, PASSWORD)
-    # bot.run()
-    r = bot.get_story()
+    bot.run()
+    # r = bot.get_story()
     print(r)
 
     # Add stories
