@@ -68,7 +68,7 @@ class Extrapolate:
                 proper_nouns.append(o)
 
         for n in n_tagged:
-            if n[1] == 'PRP' and n not in p_pnouns:
+            if (n[1] == 'PRP' or n[1] == 'PRP$') and n not in p_pnouns:
                 p_pnouns.append(n)
 
         print("")
