@@ -37,7 +37,7 @@ class Extrapolate:
                   (("herself", "F"), ("himself", "M"))]
         for pair in pnlist:
             for pi, p in enumerate(pair):
-                if p[0] == pnoun:
+                if p[0] == pnoun and p[1] == gender:
                     return pair[(pi-1)%2][0]
         else:
             return pnoun
@@ -68,7 +68,7 @@ class Extrapolate:
                 proper_nouns.append(o)
 
         for n in n_tagged:
-            if (n[1] == 'PRP' or n[1] == 'PRP$') and n not in p_pnouns:
+            if (n[1] == 'PRP' or n[1] == 'PRP$' or n[1] == 'NNP') and n not in p_pnouns:
                 p_pnouns.append(n)
 
         print("")
