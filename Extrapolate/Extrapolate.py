@@ -72,12 +72,11 @@ class Extrapolate:
                 p_pnouns.append(n)
 
         print("")
-        for o in proper_nouns:
-            print(o[0], "is classified as", self.gp.classify(o))
 
         if (len(proper_nouns) == 1) and (len(p_pnouns) > 0):
             n_sent = sub(r"\b%s\b" %p_pnouns[0][0] , proper_nouns[0][0], n_sent, 1)
             gender = self.gp.classify(proper_nouns[0][0])
+            print(proper_nouns[0][0], "is classified as", gender)
             for pnoun in p_pnouns:
                 n_pnoun = self.change_gender(pnoun[0], gender)
                 n_sent = sub(r"\b%s\b" %pnoun[0] , n_pnoun, n_sent, 1)
@@ -88,7 +87,7 @@ class Extrapolate:
 
         return n_sent
 
-    def customize(self, o_sent, n_sent):
+    def transform(self, o_sent, n_sent):
         n_sent = self.replace_proper_nouns(o_sent, n_sent)
         return(n_sent)
         
@@ -193,7 +192,7 @@ if __name__ == '__main__':
     #print("\nTest index: "+ str(index+1))
     #print(sent_list[index])
     
-    output = e.customize(o_sent, sent_list[index])
+    output = e.transform(o_sent, sent_list[index])
     print(output)
     
     #this would be the post

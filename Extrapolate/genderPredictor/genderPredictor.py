@@ -15,12 +15,12 @@ class genderPredictor():
         femaleNames = (name for name in names.words('female.txt'))
         
         featureset = list()
-        for nameTuple in maleNames:
-            features = self._nameFeatures(nameTuple[0])
+        for name in maleNames:
+            features = self._nameFeatures(name)
             featureset.append((features,'M'))
         
-        for nameTuple in femaleNames:
-            features = self._nameFeatures(nameTuple[0])
+        for name in femaleNames:
+            features = self._nameFeatures(name)
             featureset.append((features,'F'))
     
         return featureset
@@ -41,6 +41,8 @@ class genderPredictor():
         return self.test(test_set)
         
     def classify(self,name):
+        feats=self._nameFeatures(name)
+        print(name, feats)
         for male in names.words('male.txt'):
             if name == male:
                 return 'M'
@@ -48,7 +50,6 @@ class genderPredictor():
             if name == female:
                 return 'F'
         
-        feats=self._nameFeatures(name)
         return self.classifier.classify(feats)
         
     def train(self,train_set):
@@ -62,7 +63,6 @@ class genderPredictor():
         return self.classifier.most_informative_features(n)
 
     def _nameFeatures(self,name):
-        name=name[0]
         return {
             'last_letter': name[-1],
             'last_two' : name[-2:],
@@ -78,4 +78,4 @@ if __name__ == "__main__":
     for feat in feats:
         print (feat)
     
-    print ('\nStephen is classified as %s', gp.classify('Stephen'))
+    print ('\nStephen is classified as', gp.classify('Stephen'))
