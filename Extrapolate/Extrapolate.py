@@ -20,9 +20,15 @@ from genderPredictor import genderPredictor
 class Extrapolate:
 
     def __init__(self):
+        print("Setting up Gender Predictor: ")
         self.gp = genderPredictor.genderPredictor()
         accuracy=self.gp.trainAndTest()
+        print("Accuracy:", accuracy)
+        print ('Most Informative Features')
         feats=self.gp.getMostInformativeFeatures(10)
+        
+        for feat in feats:
+            print (feat)
 
     def change_gender(self, pnoun, gender):
         pnlist = [(("her", "F"), ("him", "M")),
@@ -50,6 +56,12 @@ class Extrapolate:
 
         o_tagged = pos_tag(word_tokenize(o_sent))
         n_tagged = pos_tag(word_tokenize(n_sent))
+        
+        print("\nTransforming the output:")
+        print("Input sentence:", o_sent)
+        print("Found sentence:", n_sent)
+        print("Input sentence tagged:", o_tagged)
+        print("Found sentence tagged:", n_tagged)
 
         for o in o_tagged:
             if o[1] == 'NNP' and o not in proper_nouns:
@@ -59,8 +71,9 @@ class Extrapolate:
             if n[1] == 'PRP' and n not in p_pnouns:
                 p_pnouns.append(n)
 
+        print("")
         for o in proper_nouns:
-            print(o, self.gp.classify(o))
+            print(o[0], "is classified as", self.gp.classify(o))
 
         if (len(proper_nouns) == 1) and (len(p_pnouns) > 0):
             n_sent = sub(r"\b%s\b" %p_pnouns[0][0] , proper_nouns[0][0], n_sent, 1)
@@ -115,9 +128,10 @@ class Extrapolate:
                 synonyms[idx] = self.find_synonyms(item[0], wordnet.ADJ)
 
         # gets rid of duplicates
-        for s in synonyms:
+        for si, s in enumerate(synonyms):
             s = list(set(s))
-            print(s)
+            print(tag_list[si][0], ": ", s)
+            
         
         search_sent = []
         # creates a list of similar sentences to search for
@@ -136,8 +150,10 @@ class Extrapolate:
         # will get rid of duplicates once i make it hashable
         search_sent = list(set(search_sent))
         
-        for s in search_sent:
-            print(s)
+        print("\nSample list of synonymous sentences:")
+        for i in range(min(len(search_sent), 20)):
+            print(search_sent[i])
+            
         return search_sent
 
 
@@ -174,8 +190,8 @@ if __name__ == '__main__':
     
     index = 10
     #index = random.randint(0, len(sent_list)-1)
-    print("\nTest index: "+ str(index+1))
-    print(sent_list[index])
+    #print("\nTest index: "+ str(index+1))
+    #print(sent_list[index])
     
     output = e.customize(o_sent, sent_list[index])
     print(output)
