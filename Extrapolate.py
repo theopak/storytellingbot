@@ -154,16 +154,10 @@ class Extrapolate:
         search_sent = []
         # creates a list of similar sentences to search for
         for idx, item in enumerate(tag_list):
-            # looks for synonyms at the corresponding index,
+            # looks for synonyms at the corresponding index
             for s in synonyms[idx]:
-                temp = self.strip_pos_copy(tag_list)
-                temp[idx] = s
+                temp = sub(r"\b%s\b" %item[0], s, sent)
                 search_sent.append(temp)
-
-        for sdx, s in enumerate(search_sent):
-            result = ' '.join(s).replace(' ,',',').replace(' .','.').replace(' !','!')
-            result = result.replace(' ?','?').replace(' : ',': ').replace(' \'', '\'').replace('_',' ')
-            search_sent[sdx] = result
 
         # will get rid of duplicates once i make it hashable
         search_sent = list(set(search_sent))
