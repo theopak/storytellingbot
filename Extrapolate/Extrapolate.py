@@ -20,6 +20,7 @@ from genderPredictor import genderPredictor
 class Extrapolate:
 
     def __init__(self):
+        self.sent_syns = []
         print("Setting up Gender Predictor: ")
         self.gp = genderPredictor.genderPredictor()
         accuracy=self.gp.trainAndTest()
@@ -37,7 +38,7 @@ class Extrapolate:
                   (("herself", "F"), ("himself", "M"))]
         for pair in pnlist:
             for pi, p in enumerate(pair):
-                if p[0] == pnoun and p[1] == gender:
+                if p[0] == pnoun and p[1] != gender:
                     return pair[(pi-1)%2][0]
         else:
             return pnoun
@@ -49,14 +50,27 @@ class Extrapolate:
             for l in s.lemmas():
                 syn_words.append(l.name())
         return syn_words
-
+        
+    def replace_synonyms(self, o_sent, n_sent):
+    
+        o_tagged = pos_tag(word_tokenize(o_sent))
+        n_tagged = pos_tag(word_tokenize(n_sent))
+        
+        for n in n_tagged:
+            for sdx, syn_list in enumerate(self.sent_syns):
+                for syn in syn_list:
+                    if (n[0] == syn):
+                        n_sent = sub(r"\b%s\b" %n[0], o_tagged[sdx][0], n_sent)
+        
+        return n_sent
+    
     def replace_proper_nouns(self, o_sent, n_sent):
         proper_nouns = []
         p_pnouns = []
 
         o_tagged = pos_tag(word_tokenize(o_sent))
         n_tagged = pos_tag(word_tokenize(n_sent))
-
+        
         print("\nTransforming the output:")
         print("Input sentence:", o_sent)
         print("Found sentence:", n_sent)
@@ -79,7 +93,7 @@ class Extrapolate:
             print(proper_nouns[0][0], "is classified as", gender)
             for pnoun in p_pnouns:
                 n_pnoun = self.change_gender(pnoun[0], gender)
-                n_sent = sub(r"\b%s\b" %pnoun[0] , n_pnoun, n_sent, 1)
+                n_sent = sub(r"\b%s\b" %pnoun[0] , n_pnoun, n_sent)
         elif len(proper_nouns) < 1:
             print("No proper nouns to replace")
         else:
@@ -89,6 +103,7 @@ class Extrapolate:
 
     def transform(self, o_sent, n_sent):
         n_sent = self.replace_proper_nouns(o_sent, n_sent)
+        n_sent = self.replace_synonyms(o_sent, n_sent)
         return(n_sent)
 
     def strip_pos_copy(self, tag):
@@ -131,7 +146,8 @@ class Extrapolate:
             s = list(set(s))
             print(tag_list[si][0], ": ", s)
 
-
+        self.sent_syns = synonyms
+            
         search_sent = []
         # creates a list of similar sentences to search for
         for idx, item in enumerate(tag_list):
@@ -159,21 +175,21 @@ class Extrapolate:
 if __name__ == '__main__':
     #list of pretend sentences to search through
     sent_list = []
-    sent_list.append("She danced with the prince and they fell in love.")
-    sent_list.append("The emperor realized he was swindled but continues the parade anyway.")
-    sent_list.append("He and his wife were very poor.")
-    sent_list.append("She promised anything if he would get it for her. ")
-    sent_list.append("The bears came home and frightened her and she ran away.")
-    sent_list.append("They came upon a house made of sweets and they ate some. ")
-    sent_list.append("He climbed the beanstalk and found a giant there who had gold coins. ")
-    sent_list.append("The rats followed him and he led them into the harbor and they died.")
-    sent_list.append("He begged to be spared and told him about his poor father.")
-    sent_list.append("The two were married and lived happily everafter.")
-    sent_list.append("The good fairies made another spell so that she would only sleep for 100 years and a prince would awaken her. ")
-    sent_list.append("The stepmother ordered her to be killed but the huntsman spared her life.")
-    sent_list.append("The wolf fell into it and died.")
-    sent_list.append("A fairy granted her wish and gave her a seed to plant. ")
-    sent_list.append("He decided to run away and came across a cottage. ")
+    sent_list.append("She dance with the prince and they fall in love.")
+    sent_list.append("The emperor realize he was swindled but continues the parade anyway.")
+    sent_list.append("He and his wife are very poor.")
+    sent_list.append("She promise anything if he would get it for her. ")
+    sent_list.append("The bears come home and frightened her and she ran away.")
+    sent_list.append("They come upon a house made of sweet and they eat some. ")
+    sent_list.append("He climb the beanstalk and find a giant there who had gold coins. ")
+    sent_list.append("The rats follow him and he led them into the harbor and they die.")
+    sent_list.append("He begs to be spared and tells him about his poor father.")
+    sent_list.append("The two are married and live happily everafter.")
+    sent_list.append("The good fairies make another spell so that she would only sleep for 100 years and a prince would awaken her. ")
+    sent_list.append("The stepmother order her to be killed but the huntsman spared her life.")
+    sent_list.append("The wolf fall into it and dies.")
+    sent_list.append("A fairy grant her wish and give her a seed to plant. ")
+    sent_list.append("He decide to run away and come across a cottage. ")
 
     #instantiating extrapolate class, TAKES NOTHING
     e = Extrapolate()
