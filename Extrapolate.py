@@ -2,6 +2,7 @@
 
 
 #import nltk
+#import pattern.en
 from nltk import word_tokenize
 from nltk import pos_tag
 from nltk.corpus import wordnet
@@ -10,7 +11,7 @@ from nltk.stem.wordnet import WordNetLemmatizer as wnl
 from re import sub
 import string
 import random
-from genderPredictor import genderPredictor
+import genderPredictor
 #nltk.download()
 # nltk downloads: maxent_ne_chunker, maxent_treebank_pos_tagger, punkt, wordnet
 # install numpy
@@ -20,7 +21,12 @@ from genderPredictor import genderPredictor
 class Extrapolate:
 
     def __init__(self):
+<<<<<<< HEAD:Extrapolate/Extrapolate.py
         # print("Setting up Gender Predictor: ")
+=======
+        self.sent_syns = []
+        print("Setting up Gender Predictor: ")
+>>>>>>> d5bae91b18d7a85ee838e9f0d0d0842c4b648610:Extrapolate.py
         self.gp = genderPredictor.genderPredictor()
         accuracy = self.gp.trainAndTest()
         # print("Accuracy:", accuracy)
@@ -37,7 +43,7 @@ class Extrapolate:
                   (("herself", "F"), ("himself", "M"))]
         for pair in pnlist:
             for pi, p in enumerate(pair):
-                if p[0] == pnoun:
+                if p[0] == pnoun and p[1] != gender:
                     return pair[(pi-1)%2][0]
         else:
             return pnoun
@@ -49,26 +55,48 @@ class Extrapolate:
             for l in s.lemmas():
                 syn_words.append(l.name())
         return syn_words
-
+        
+    def replace_synonyms(self, o_sent, n_sent):
+    
+        o_tagged = pos_tag(word_tokenize(o_sent))
+        n_tagged = pos_tag(word_tokenize(n_sent))
+        
+        for n in n_tagged:
+            for sdx, syn_list in enumerate(self.sent_syns):
+                for syn in syn_list:
+                    if (n[0] == syn):
+                        n_sent = sub(r"\b%s\b" %n[0], o_tagged[sdx][0], n_sent)
+        
+        return n_sent
+    
     def replace_proper_nouns(self, o_sent, n_sent):
         proper_nouns = []
         p_pnouns = []
 
         o_tagged = pos_tag(word_tokenize(o_sent))
         n_tagged = pos_tag(word_tokenize(n_sent))
+<<<<<<< HEAD:Extrapolate/Extrapolate.py
 
         # print("\nTransforming the output:")
         # print("Input sentence:", o_sent)
         # print("Found sentence:", n_sent)
         # print("Input sentence tagged:", o_tagged)
         # print("Found sentence tagged:", n_tagged)
+=======
+        
+        print("\nTransforming the output:")
+        print("Input sentence:", o_sent)
+        print("Found sentence:", n_sent)
+        print("Input sentence tagged:", o_tagged)
+        print("Found sentence tagged:", n_tagged)
+>>>>>>> d5bae91b18d7a85ee838e9f0d0d0842c4b648610:Extrapolate.py
 
         for o in o_tagged:
             if o[1] == 'NNP' and o not in proper_nouns:
                 proper_nouns.append(o)
 
         for n in n_tagged:
-            if (n[1] == 'PRP' or n[1] == 'PRP$') and n not in p_pnouns:
+            if (n[1] == 'PRP' or n[1] == 'PRP$' or n[1] == 'NNP') and n not in p_pnouns:
                 p_pnouns.append(n)
 
         # print("")
@@ -79,7 +107,7 @@ class Extrapolate:
             # print(proper_nouns[0][0], "is classified as", gender)
             for pnoun in p_pnouns:
                 n_pnoun = self.change_gender(pnoun[0], gender)
-                n_sent = sub(r"\b%s\b" %pnoun[0] , n_pnoun, n_sent, 1)
+                n_sent = sub(r"\b%s\b" %pnoun[0] , n_pnoun, n_sent)
         elif len(proper_nouns) < 1:
             print("No proper nouns to replace")
         else:
@@ -89,6 +117,7 @@ class Extrapolate:
 
     def transform(self, o_sent, n_sent):
         n_sent = self.replace_proper_nouns(o_sent, n_sent)
+        n_sent = self.replace_synonyms(o_sent, n_sent)
         return(n_sent)
 
     def strip_pos_copy(self, tag):
@@ -121,6 +150,8 @@ class Extrapolate:
         for idx, item in enumerate(tag_list):
             if item[1][0] == 'V':
                 synonyms[idx] = self.find_synonyms(item[0], wordnet.VERB)
+                #for v in synonyms[idx]:
+                 #   v = en.verb.past(v)
             elif item[1] == 'NN' or item[1] == 'NNS':
                 synonyms[idx] = self.find_synonyms(item[0], wordnet.NOUN)
             elif item[1][0] == 'J':
@@ -131,20 +162,15 @@ class Extrapolate:
             s = list(set(s))
             # print(tag_list[si][0], ": ", s)
 
-
+        self.sent_syns = synonyms
+            
         search_sent = []
         # creates a list of similar sentences to search for
         for idx, item in enumerate(tag_list):
-            # looks for synonyms at the corresponding index,
+            # looks for synonyms at the corresponding index
             for s in synonyms[idx]:
-                temp = self.strip_pos_copy(tag_list)
-                temp[idx] = s
+                temp = sub(r"\b%s\b" %item[0], s, sent)
                 search_sent.append(temp)
-
-        for sdx, s in enumerate(search_sent):
-            result = ' '.join(s).replace(' ,',',').replace(' .','.').replace(' !','!')
-            result = result.replace(' ?','?').replace(' : ',': ').replace(' \'', '\'').replace('_',' ')
-            search_sent[sdx] = result
 
         # will get rid of duplicates once i make it hashable
         search_sent = list(set(search_sent))
@@ -159,16 +185,16 @@ class Extrapolate:
 if __name__ == '__main__':
     #list of pretend sentences to search through
     sent_list = []
-    sent_list.append("She danced with the prince and they fell in love.")
+    sent_list.append("She danced with the prince and they fall in love.")
     sent_list.append("The emperor realized he was swindled but continues the parade anyway.")
     sent_list.append("He and his wife were very poor.")
     sent_list.append("She promised anything if he would get it for her. ")
     sent_list.append("The bears came home and frightened her and she ran away.")
     sent_list.append("They came upon a house made of sweets and they ate some. ")
-    sent_list.append("He climbed the beanstalk and found a giant there who had gold coins. ")
-    sent_list.append("The rats followed him and he led them into the harbor and they died.")
+    sent_list.append("He climbed the beanstalk and found a giant there who had gold coins that he wanted. ")
+    sent_list.append("The rats follow him and he led them into the harbor and they die.")
     sent_list.append("He begged to be spared and told him about his poor father.")
-    sent_list.append("The two were married and lived happily everafter.")
+    sent_list.append("The two were married and live happily everafter.")
     sent_list.append("The good fairies made another spell so that she would only sleep for 100 years and a prince would awaken her. ")
     sent_list.append("The stepmother ordered her to be killed but the huntsman spared her life.")
     sent_list.append("The wolf fell into it and died.")
@@ -179,18 +205,18 @@ if __name__ == '__main__':
     e = Extrapolate()
 
     #expected input from storytellingbot
-    o_sent = "Stephen took a sharp sword"
-    #print("\nInput:" + o_sent)
-    o_sent = input("Enter a sentence: ")
+    o_sent = "Elsa took a sharp sword to slay the monster"
+    print("\nInput:" + o_sent)
+    #o_sent = input("Enter a sentence: ")
 
     search_sent = e.extrapolate(o_sent)
 
     #MAGIC OF FINDING A SENTENCE IN THE DATABASE GO!!!!!
 
-    index = 10
+    index = 6
     #index = random.randint(0, len(sent_list)-1)
-    #print("\nTest index: "+ str(index+1))
-    index = int(input("Enter a number between 1 and "+str(len(sent_list))+": "))-1
+    print("\nTest index: "+ str(index+1))
+    #index = int(input("Enter a number between 1 and "+str(len(sent_list))+": "))-1
     #print(sent_list[index])
 
     output = e.transform(o_sent, sent_list[index])

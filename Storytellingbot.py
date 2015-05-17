@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 # coding: utf-8
 
-
 from __future__ import print_function
 from localsettings import USERNAME, PASSWORD
 import sqlite3
@@ -11,8 +10,7 @@ import time
 import requests
 from random import randint, choice
 import re
-from Extrapolate import Extrapolate
-
+import Extrapolate
 
 class Storytellingbot(object):
     """
@@ -32,7 +30,7 @@ class Storytellingbot(object):
         Login to Reddit. OAuth2 bots gave a rate limit twice as high.
         """
         if DEBUG:
-            print('[INFO] Storytellingbot.__init__() called…')
+            print('[INFO] Storytellingbot.__init__() called...')
         self.con = sqlite3.connect(db_file)
         self.cur = self.con.cursor()
         self.setup()
@@ -46,7 +44,7 @@ class Storytellingbot(object):
         Remove any locks on the data layer.
         """
         if DEBUG:
-            print('[INFO] Storytellingbot.__del__() called…')
+            print('[INFO] Storytellingbot.__del__() called...')
         self.con.close()
         if DEBUG:
             print('\tClosed db connection.')
@@ -154,7 +152,7 @@ class Storytellingbot(object):
         if DEBUG:
             print('[INFO] Storytellingbot.enqueue_response():',
                   '\n\tkeyword:', keyword, ', id:', comment.id,
-                  ', parent_id:', comment.parent_id, ', parent_url; […]',
+                  ', parent_id:', comment.parent_id, ', parent_url; [...]',
                   ', seed:', story_id,
                   '\n\tbody:', comment.body, '\n\tresponse:', response)
             # pprint(vars(comment))
@@ -387,10 +385,10 @@ class Storytellingbot(object):
         rate limit allows so.
         TODO: pass a loop iteration if the bot cannot connect to reddit.
         """
-        print('Running bot at maximum limits auto-enforced by API wrapper…')
+        print('Running bot at maximum limits auto-enforced by API wrapper...')
         while True:
             try:
-                self.build_queue()
+                self.build_queue(subreddit='all')
                 pass
             except Exception as e:
                 print('[ERROR] Storytellingbot.build_queue():', e)
