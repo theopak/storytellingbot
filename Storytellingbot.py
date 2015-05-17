@@ -8,6 +8,7 @@ import sqlite3
 from pprint import pprint
 import praw
 import time
+import requests
 from random import randint, choice
 import re
 from Extrapolate import Extrapolate
@@ -259,9 +260,9 @@ class Storytellingbot(object):
     def find_sentence(self, candidates):
         # find the first sentence that matches a candidate
         if DEBUG:
-            print('[INFO] Storytellingbot.find_sentence() similar to one of:')
-            for i, s in enumerate(candidates):
-                print('\t' + str(i) + '.', re.sub(r'^(.{70}).*(.{5})$', '\g<1>…\g<2>', s))
+            print('[INFO] Storytellingbot.find_sentence() similar to one of:', len(candidates))
+            # for i, s in enumerate(candidates):
+            #     print('\t' + str(i) + '.', re.sub(r'^(.{70}).*(.{5})$', '\g<1>…\g<2>', s))
         sentence_id, sentence = self.find_sentence_helper(candidates)
         if DEBUG:
             print('\tresult: using', sentence_id, ':', sentence)
@@ -280,7 +281,7 @@ class Storytellingbot(object):
                 sentence = sentence + ' ' + s[0]
         return seed, sentence
 
-    def build_queue(self, subreddit='storytellingbottests'):
+    def build_queue(self, subreddit='all'):
         """
         Build a work queue.
         TODO(@theopak): Enqueue responses to replies to responses, regardless
@@ -330,7 +331,7 @@ class Storytellingbot(object):
         if result:
             title, source = result
             out = '| this comment was algorithmically generated based on ' + \
-                  title + ' via “' + source + '”'
+                  title + ' via ' + source
             return '^' + out.replace(' ', ' ^')
         return ''
 
@@ -369,9 +370,13 @@ class Storytellingbot(object):
                   '\n\tresponse:', response)
             return True
             pass
-        except Exception as e:
+        except requests.exceptions.HTTPError as e:
             print('[ERROR] Storytellingbot.send_one():', e)
-            raise e
+            self.mark_sent(id)
+            pass
+        else:
+            # raise NameError('could not send response')
+            pass
         return False
 
     def run(self):
@@ -408,10 +413,10 @@ def main():
     """
     bot = Storytellingbot(USERNAME, PASSWORD)
     bot.run()
-    r = bot.get_story()
-    print(r)
 
     # Populate db
+    # harry_potter_keywords = ['wizard', 'magic', 'story', 'bot', 'karma']
+    # bot.add_keywords(harry_potter_keywords)
     if False:
         harry_potter_keywords = ['Harry Potter']
         bot.add_keywords(harry_potter_keywords)
