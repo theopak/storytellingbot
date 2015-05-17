@@ -43,7 +43,7 @@ class genderPredictor():
 
     def classify(self, name):
         feats = self._nameFeatures(name)
-        print(name, feats)
+        # print(name, feats)
         for male in names.words('male.txt'):
             if name == male:
                 return 'M'
