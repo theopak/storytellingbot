@@ -11,7 +11,7 @@ from nltk.stem.wordnet import WordNetLemmatizer as wnl
 from re import sub
 import string
 import random
-import genderPredictor
+from .genderPredictor import genderPredictor
 #nltk.download()
 # nltk downloads: maxent_ne_chunker, maxent_treebank_pos_tagger, punkt, wordnet
 # install numpy
@@ -21,12 +21,8 @@ import genderPredictor
 class Extrapolate:
 
     def __init__(self):
-<<<<<<< HEAD:Extrapolate/Extrapolate.py
-        # print("Setting up Gender Predictor: ")
-=======
         self.sent_syns = []
         print("Setting up Gender Predictor: ")
->>>>>>> d5bae91b18d7a85ee838e9f0d0d0842c4b648610:Extrapolate.py
         self.gp = genderPredictor.genderPredictor()
         accuracy = self.gp.trainAndTest()
         # print("Accuracy:", accuracy)
@@ -55,41 +51,31 @@ class Extrapolate:
             for l in s.lemmas():
                 syn_words.append(l.name())
         return syn_words
-        
+
     def replace_synonyms(self, o_sent, n_sent):
-    
+
         o_tagged = pos_tag(word_tokenize(o_sent))
         n_tagged = pos_tag(word_tokenize(n_sent))
-        
+
         for n in n_tagged:
             for sdx, syn_list in enumerate(self.sent_syns):
                 for syn in syn_list:
                     if (n[0] == syn):
                         n_sent = sub(r"\b%s\b" %n[0], o_tagged[sdx][0], n_sent)
-        
+
         return n_sent
-    
+
     def replace_proper_nouns(self, o_sent, n_sent):
         proper_nouns = []
         p_pnouns = []
 
         o_tagged = pos_tag(word_tokenize(o_sent))
         n_tagged = pos_tag(word_tokenize(n_sent))
-<<<<<<< HEAD:Extrapolate/Extrapolate.py
-
         # print("\nTransforming the output:")
         # print("Input sentence:", o_sent)
         # print("Found sentence:", n_sent)
         # print("Input sentence tagged:", o_tagged)
         # print("Found sentence tagged:", n_tagged)
-=======
-        
-        print("\nTransforming the output:")
-        print("Input sentence:", o_sent)
-        print("Found sentence:", n_sent)
-        print("Input sentence tagged:", o_tagged)
-        print("Found sentence tagged:", n_tagged)
->>>>>>> d5bae91b18d7a85ee838e9f0d0d0842c4b648610:Extrapolate.py
 
         for o in o_tagged:
             if o[1] == 'NNP' and o not in proper_nouns:
@@ -163,7 +149,7 @@ class Extrapolate:
             # print(tag_list[si][0], ": ", s)
 
         self.sent_syns = synonyms
-            
+
         search_sent = []
         # creates a list of similar sentences to search for
         for idx, item in enumerate(tag_list):
@@ -210,8 +196,6 @@ if __name__ == '__main__':
     #o_sent = input("Enter a sentence: ")
 
     search_sent = e.extrapolate(o_sent)
-
-    #MAGIC OF FINDING A SENTENCE IN THE DATABASE GO!!!!!
 
     index = 6
     #index = random.randint(0, len(sent_list)-1)

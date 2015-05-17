@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # coding: utf-8
 
+
 from __future__ import print_function
 from localsettings import USERNAME, PASSWORD
 import sqlite3
@@ -10,7 +11,8 @@ import time
 import requests
 from random import randint, choice
 import re
-import Extrapolate
+from Extrapolate import Extrapolate
+
 
 class Storytellingbot(object):
     """
